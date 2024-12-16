@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Картинка дня</title>
+    <style>
+      img {
+        width: 200px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Ваша картинка сегодня</h1>
+    <div class="date-container">
+      <p>Сегодняшнее число:</p>
+      <p id="date"></p>
+    </div>
+
+    <div id="image-container">
+      <h2>Вот ваше случайное изображение</h2>
+      <img id="image" src="" alt="Random Image" />
+      <br />
+      <p id="image-name"></p>
+      <p class="author-name" id="author-name"></p>
+      <button id="like-button">Like</button>
+      <br />
+      <p id="likes-count">Likes: 0</p>
+      <p id="message"></p>
+    </div>
+
+    <div id="history-container">
+      <h2>Загрузить картинку по дате</h2>
+      <input type="date" id="history-date" />
+      <button id="load-history-button">Загрузить</button>
+      <p id="history-message"></p>
+    </div>
+
+    <script>
+      const dateElement = document.getElementById("date");
+      const imageElement = document.getElementById("image");
+      const imageNameElement = document.getElementById("image-name");
+      const authorNameElement = document.getElementById("author-name");
+      const likeButton = document.getElementById("like-button");
+      const likesCountElement = document.getElementById("likes-count");
+      const messageElement = document.getElementById("message");
+
+      const historyDateInput = document.getElementById("history-date");
+      const loadHistoryButton = document.getElementById("load-history-button");
+      const historyMessageElement = document.getElementById("history-message");
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const currentDate = new Date().toLocaleDateString();
+        dateElement.textContent = currentDate;
+
+        // Проверка на наличие сохраненной картинки дня
+        const savedImageData = localStorage.getItem(
+          `imageOfTheDay_${currentDate}`
+        );
+
+        if (savedImageData) {
+          // Картинка дня уже загружена
+          const imageData = JSON.parse(savedImageData);
+          loadImageData(imageData);
+          messageElement.textContent = "Картинка дня уже загружена!";
+        } else {
+          // Картинка дня отсутствует
+          fetch(
+            "https://api.unsplash.com/photos/random?client_id=ewy1FHc66oYdfiEXj2tmIeTlNhdNUmuL6UH67oZdLLs"
+          )
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(
+                  `Ошибка ${response.status}: ${response.statusText}`
+                );
+              }
+              return response.json();
+            })
+            .then((data) => {
+              const image = data.urls.regular;
+              const authorName = data.user.name;
+              const description = data.alt_description || "Нет описания";
+
+              const imageData = {
+                url: image,
+                author: authorName,
+                description: description,
+                likes: 0,
+                id: currentDate,
+              };
+
+              loadImageData(imageData);
+
+              localStorage.setItem(
+                `imageOfTheDay_${currentDate}`,
+                JSON.stringify(imageData)
+              );
+            })
+            .catch((error) => {
+              console.error("Ошибка загрузки изображения:", error);
+              imageNameElement.textContent =
+                "Не удалось загрузить изображение. Попробуйте позже.";
+            });
+        }
+
+        likeButton.addEventListener("click", () => {
+          const savedData = JSON.parse(
+            localStorage.getItem(`imageOfTheDay_${currentDate}`)
+          );
+          savedData.likes += 1;
+          likesCountElement.textContent = `Likes: ${savedData.likes}`;
+          localStorage.setItem(
+            `imageOfTheDay_${currentDate}`,
+            JSON.stringify(savedData)
+          );
+        });
+
+        // Загрузка картинки по дате
+        loadHistoryButton.addEventListener("click", () => {
+          const selectedDate = new Date(
+            historyDateInput.value
+          ).toLocaleDateString();
+          const savedData = localStorage.getItem(
+            `imageOfTheDay_${selectedDate}`
+          );
+
+          if (savedData) {
+            const imageData = JSON.parse(savedData);
+            loadImageData(imageData);
+            historyMessageElement.textContent = `Картинка для даты ${selectedDate} успешно загружена.`;
+          } else {
+            historyMessageElement.textContent = `Нет данных для выбранной даты: ${selectedDate}.`;
+          }
+        });
+      });
+
+      // Загрузка данных изображения на страницу
+      function loadImageData(imageData) {
+        imageElement.src = imageData.url;
+        imageNameElement.textContent = `Описание: ${imageData.description}`;
+        authorNameElement.textContent = `Автор: ${imageData.author}`;
+        likesCountElement.textContent = `Likes: ${imageData.likes}`;
+      }
+    </script>
+  </body>
+</html>
